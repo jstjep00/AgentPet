@@ -10,7 +10,7 @@ readme = "README.md"
 license = "MIT"
 license-files = ["LICENSE"]
 requires-python = ">=3.10"
-dependencies = ["PySide6>=6.6", "psutil>=5.9"]
+dependencies = ["PySide6-Essentials>=6.6", "psutil>=5.9"]
 keywords = ["desktop pet", "claude code", "hermes agent", "pixel art"]
 classifiers = [
     "Environment :: X11 Applications :: Qt",

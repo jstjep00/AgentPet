@@ -20,7 +20,7 @@ class FakeHome:
     def __enter__(self):
         # short on purpose: a Unix socket path must stay under about 100 bytes (macOS)
         self.tmp = tempfile.TemporaryDirectory(dir="/tmp" if os.path.isdir("/tmp") and os.name != "nt" else None)
-        d = self.tmp.name
+        d = os.path.realpath(self.tmp.name)       # macOS: /tmp is a link to /private/tmp
         self.env = mock.patch.dict(os.environ, {"HOME": d, "USERPROFILE": d, "LOCALAPPDATA": d,
                                                  "XDG_RUNTIME_DIR": d, "XDG_STATE_HOME": d, "XDG_CONFIG_HOME": d})
         self.env.start()
@@ -65,7 +65,17 @@ class Pets:
         return self.lines
 
     def close(self):
+        """Stops taking connections. (Closing alone does not wake a thread blocked in accept() on
+        Linux, which would keep accepting; shutting the socket down does.)"""
+        try:
+            self.sock.shutdown(socket.SHUT_RDWR)
+        except OSError:
+            pass
         self.sock.close()
+        try:
+            os.unlink(places.channel())
+        except OSError:
+            pass
 
 
 posix_only = unittest.skipIf(sys.platform == "win32", "Unix sockets; Windows is covered by the Qt test")

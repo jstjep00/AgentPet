@@ -48,14 +48,17 @@ class PetsApp:
 
         from . import window
 
+        from PySide6.QtGui import QGuiApplication
+
         if not self._listen():
             return False
-        if places.LINUX and os.environ.get("QT_QPA_PLATFORM", "xcb") == "xcb":
+        platform = QGuiApplication.platformName()      # the extras need the real thing, not "offscreen"
+        if platform == "xcb":
             try:
                 self.x11 = window.X11Input()
             except Exception as exc:
                 log.warning("no X input regions (clicks won't pass around the pets): %s", exc)
-        if places.MACOS:
+        if platform == "cocoa":
             try:
                 self.mac = window.Mac()
                 self.mac.hide_dock_icon()
