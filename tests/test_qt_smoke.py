@@ -3,6 +3,7 @@ the real channel (a Unix socket, or a named pipe on Windows), makes a pet per ag
 draws it."""
 
 import os
+import threading
 import time
 import unittest
 
@@ -41,10 +42,16 @@ class SmokeTest(unittest.TestCase):
         self.home.__exit__()
 
     def send(self, agent, event, tool=None, pid=None):
+        """Like a hook: from another thread, while the app runs (on Windows a pipe write waits
+        for the app to read it)."""
         me = procs.info(pid or os.getpid())
         msg = events.message(agent, event, f"s-{agent}", tool, "Terminal", pid=me.pid, pid_start=me.stamp,
                              where="~/projects/x")
-        self.assertTrue(ipc.send(events.encode(msg)), "the pets did not take the message")
+        result = []
+        t = threading.Thread(target=lambda: result.append(ipc.send(events.encode(msg))))
+        t.start()
+        self.assertTrue(pump(lambda: not t.is_alive()))
+        self.assertEqual(result, [True], "the pets did not take the message")
 
     def test_hook_messages_make_pets_that_draw(self):
         self.send("claude", "SessionStart")

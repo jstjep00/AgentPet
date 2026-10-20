@@ -55,7 +55,7 @@ class HermesPluginTest(unittest.TestCase):
         os.environ["TERM_PROGRAM"] = "kitty"
         os.chdir(d)
         self.pets = Pets()
-        self.ctx, _ = load_plugin()
+        self.ctx, self.ns = load_plugin()
 
     def tearDown(self):
         self.pets.close()
@@ -63,6 +63,7 @@ class HermesPluginTest(unittest.TestCase):
         self.home.__exit__()
 
     def got(self, n):
+        self.ns["_outbox"].join()              # the plugin sends from a background thread
         return [json.loads(line) for line in self.pets.wait(n)]
 
     def test_maps_hermes_hooks_to_agent_events(self):
@@ -103,6 +104,17 @@ class HermesPluginTest(unittest.TestCase):
     def test_no_pet_running_is_fine(self):
         self.pets.close()
         self.ctx.hooks["pre_tool_call"](session_id="s1", tool_name="terminal")   # must not raise
+        self.ns["_outbox"].join()
+
+    def test_hermes_never_waits(self):
+        import time
+
+        self.pets.close()
+        start = time.monotonic()
+        for _ in range(20):
+            self.ctx.hooks["pre_tool_call"](session_id="s1", tool_name="terminal")
+        self.assertLess(time.monotonic() - start, 0.05)
+        self.ns["_outbox"].join()
 
 
 if __name__ == "__main__":

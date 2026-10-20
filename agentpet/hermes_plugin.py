@@ -10,6 +10,7 @@
 import getpass
 import json
 import os
+import queue
 import re
 import socket
 import subprocess
@@ -124,6 +125,29 @@ def _spawn():
                      stderr=subprocess.DEVNULL, close_fds=True, **kw)
 
 
+# Hermes never waits on the pets: reports go out in order from one background thread.
+_outbox = queue.Queue()
+_worker = []
+
+
+def _deliver():
+    while True:
+        event, data = _outbox.get()
+        try:
+            d = _runtime_dir()
+            name = "last-hermes-%d.json" % os.getpid()
+            tmp = os.path.join(d, "." + name + ".tmp")
+            with open(tmp, "wb") as f:
+                f.write(data)
+            os.replace(tmp, os.path.join(d, name))
+            if not _send(data) and event in STARTERS:
+                _spawn()
+        except Exception:
+            pass  # A missing desktop pet must never disturb Hermes.
+        finally:
+            _outbox.task_done()
+
+
 def _report(event, session=None, tool=None):
     try:
         msg = {"v": 1, "agent": "hermes", "event": event, "ts": int(time.time() * 1000)}
@@ -143,15 +167,12 @@ def _report(event, session=None, tool=None):
         msg["where"] = _short_path(os.getcwd())
         if _TTY:
             msg["tty"] = _TTY
-        data = json.dumps(msg).encode("utf-8")
-        d = _runtime_dir()
-        name = "last-hermes-%d.json" % os.getpid()
-        tmp = os.path.join(d, "." + name + ".tmp")
-        with open(tmp, "wb") as f:
-            f.write(data)
-        os.replace(tmp, os.path.join(d, name))
-        if not _send(data) and event in STARTERS:
-            _spawn()
+        _outbox.put((event, json.dumps(msg).encode("utf-8")))
+        with _lock:
+            if not _worker:
+                t = threading.Thread(target=_deliver, name="agentpet", daemon=True)
+                t.start()
+                _worker.append(t)
     except Exception:
         pass  # A missing desktop pet must never disturb Hermes.
 

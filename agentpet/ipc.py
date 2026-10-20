@@ -11,6 +11,7 @@ import shutil
 import socket
 import subprocess
 import sys
+import threading
 import time
 from pathlib import Path
 
@@ -23,18 +24,7 @@ def send(data: bytes, timeout: float = 0.3) -> bool:
     """One message to the running pets; False when they are not running. Never waits long."""
     line = data.rstrip(b"\n") + b"\n"
     if places.WINDOWS:
-        deadline = time.monotonic() + timeout
-        while True:
-            try:
-                with open(places.channel(), "wb", buffering=0) as pipe:
-                    pipe.write(line)
-                return True
-            except FileNotFoundError:
-                return False
-            except OSError:                    # every pipe instance busy: try again shortly
-                if time.monotonic() > deadline:
-                    return False
-                time.sleep(0.02)
+        return _send_pipe(line, timeout)
     try:
         s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
         s.settimeout(timeout)
@@ -46,6 +36,35 @@ def send(data: bytes, timeout: float = 0.3) -> bool:
         return True
     except OSError:
         return False
+
+
+def _send_pipe(line: bytes, timeout: float) -> bool:
+    """Windows: a write to the pets' named pipe waits until they read it, so it happens on a
+    helper thread that is given up on after a moment: a pet app that hangs never holds up an
+    agent's hook (the thread dies with the process)."""
+    done: list[bool] = []
+
+    def write() -> None:
+        deadline = time.monotonic() + timeout
+        while True:
+            try:
+                with open(places.channel(), "wb", buffering=0) as pipe:
+                    pipe.write(line)
+                done.append(True)
+                return
+            except FileNotFoundError:
+                done.append(False)
+                return
+            except OSError:                    # every pipe instance busy: try again shortly
+                if time.monotonic() > deadline:
+                    done.append(False)
+                    return
+                time.sleep(0.02)
+
+    t = threading.Thread(target=write, daemon=True)
+    t.start()
+    t.join(timeout + 0.5)
+    return bool(done and done[0])
 
 
 def write_last(agent: str, data: bytes, instance: object = "x") -> None:
