@@ -2,6 +2,8 @@
 
 # AgentPet
 
+[![tests](https://github.com/jstjep00/AgentPet/actions/workflows/tests.yml/badge.svg)](https://github.com/jstjep00/AgentPet/actions/workflows/tests.yml)
+
 Pixel-art desktop pets for your coding agents. Each pet belongs to one agent window and shows you
 what that agent is doing: thinking, running a command, editing code, waiting for your approval,
 done. Between turns they wander along the bottom of your screen, climb up its sides and hang
