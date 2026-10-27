@@ -1,9 +1,10 @@
 import random
 import unittest
 
-from agentpet import looks
+from agentpet import looks, sprites
+from agentpet.frame import cells
 from agentpet.motion import Area
-from agentpet.pet import LEAVE_S, NEEDS_YOU, QUIET_WORK, SLEEP_AFTER, URGENT_AFTER, Pet, View
+from agentpet.pet import FLIP_S, LEAVE_S, NEEDS_YOU, QUIET_WORK, SHORT, SLEEP_AFTER, URGENT_AFTER, Pet, View
 
 AREA = Area(0, 0, 1000, 600)
 
@@ -49,7 +50,7 @@ class PetTest(unittest.TestCase):
         self.assertEqual(p.view(43).bubble, "Running a command…")
 
     def test_short_reactions_hand_back(self):
-        p = pet()
+        p = pet(rare_chance=0, flip_chance=0)
         p.handle("PreToolUse", 0, "s1", "Edit")
         p.handle("PostToolUseFailure", 1, "s1")
         self.assertEqual(p.state(1.5), "oops")
@@ -84,6 +85,22 @@ class PetTest(unittest.TestCase):
         p = pet(rare_chance=1.0)
         p.handle("Stop", 0, "s1")
         self.assertEqual(p.state(0.5), "rare")
+
+    def test_a_backflip_then_done(self):
+        p = pet(rare_chance=0, flip_chance=1.0)
+        p.handle("Stop", 0, "s1")
+        self.assertEqual(p.state(0.3), "flip")
+        self.assertEqual(p.view(FLIP_S + 1).bubble, "Done!")
+        self.assertEqual(p.state(SHORT["flip"] + 0.1), "idle")
+
+    def test_how_often_a_finished_turn_is_a_flip_or_the_rare_surprise(self):
+        p = pet()
+        seen = {"done": 0, "flip": 0, "rare": 0}
+        for i in range(10000):
+            p.handle("Stop", i * 10.0, "s1")
+            seen[p.short[0]] += 1
+        self.assertAlmostEqual(seen["flip"] / 10000, 0.10, delta=0.01)
+        self.assertAlmostEqual(seen["rare"] / 10000, 0.03, delta=0.01)
 
     def test_leaves_when_the_last_session_ends(self):
         p = pet()
@@ -138,7 +155,7 @@ class PetTest(unittest.TestCase):
 class LooksTest(unittest.TestCase):
     def test_every_state_draws_for_both_pets(self):
         states = ("hidden", "arrive", "idle", "thinking", "working", "needs_you", "thanks", "oops", "helper",
-                  "done", "rare", "failed", "compact", "sleeping", "poke", "leaving", "held", "falling",
+                  "done", "flip", "rare", "failed", "compact", "sleeping", "poke", "leaving", "held", "falling",
                   "bonk", "dizzy", "land")
         for kind in ("clawd", "hermes"):
             size = None
@@ -151,6 +168,19 @@ class LooksTest(unittest.TestCase):
                             size = size or dims
                             self.assertEqual(dims, size, (kind, st, age))
                             self.assertTrue(0 <= f.alpha <= 1)
+
+    def test_the_flip_goes_up_and_over_and_lands_cheering(self):
+        for kind in ("clawd", "hermes"):
+            for facing in (1, -1):
+                def at(st, age):
+                    return looks.frame(View(kind, st, age, False, facing, 0, "Done!", False), 1.0)
+
+                top = at("flip", FLIP_S / 2)
+                pts, _, h = cells(top)
+                self.assertLess(max(y for _, y, _ in pts), h - 4, kind)          # up in the air
+                self.assertIsNone(top.bubble)
+                self.assertEqual(top.effects[0][0], sprites.rotate(at("flip", 0.01).effects[0][0], 2))  # upside down
+                self.assertEqual(at("flip", FLIP_S + 0.5), at("done", 0.5))
 
 
 if __name__ == "__main__":

@@ -6,7 +6,7 @@ from __future__ import annotations
 import math
 
 from . import sprites as s
-from .pet import NEEDS_YOU, SLEEPING, THINKING, WORKING, View
+from .pet import FLIP_S, NEEDS_YOU, SLEEPING, THINKING, WORKING, View
 from .frame import Frame
 
 
@@ -50,6 +50,16 @@ def _stars(age: float, cx: int, y: int) -> list:
     return out
 
 
+def _backflip(body: tuple[str, ...], age: float, w: int, h: int, height: int) -> Frame:
+    """The body going up and over backwards a quarter turn at a time (upside down at the top),
+    never below the floor, and landing on its feet. The sprite box stays empty where the pet
+    stands; the body is drawn over it."""
+    k = min(1.0, age / FLIP_S)
+    body = s.rotate(body, -int(k * 4 + 0.5))
+    lift = int(round(height * math.sin(math.pi * k)))
+    return Frame(s.freeze(s.blank(w, h)), effects=[(body, (w - len(body[0])) // 2, h - len(body) - lift)])
+
+
 def frame(view: View, t: float) -> Frame:
     return clawd(view, t) if view.kind == "clawd" else hermes(view, t)
 
@@ -80,6 +90,10 @@ def clawd(v: View, t: float) -> Frame:
             return Frame(s.clawd_turn(s.SPIN[i]), dy=-1 if i % 4 in (1, 2) else 0)
         arms = "up" if _beat(age, 4) else "down"
         return Frame(s.clawd("closed", arms), effects=[(s.SPARKLE, 0, -4), (s.SPARKLE, w - 3, -6)])
+    if st == "flip":
+        if age < FLIP_S:
+            return _backflip(s.clawd("closed", "up"), age, w, s.CLAWD_H, 8)
+        st, age = "done", age - FLIP_S                  # landed: the cheer of "done"
     if v.walking:
         eyes = "right" if v.facing > 0 else "left"
         feet = "left" if (v.steps // 3) % 2 else "right"
@@ -161,6 +175,10 @@ def hermes(v: View, t: float) -> Frame:
                            effects=_stars(age, w // 2 - 2, -5)), v)
     if st == "land":
         return _face(Frame(s.hermes(), effects=[(s.DUST, -2, h - 3), (s.DUST, w - 3, h - 3)]), v)
+    if st == "flip":
+        if age < FLIP_S:
+            return _face(_backflip(s.hermes(eyes="open", arm="up", glow=True), age, w, h, 9), v)
+        st, age = "done", age - FLIP_S
     if v.walking:
         kw["legs"] = "left" if (v.steps // 3) % 2 else "right"
         kw["back_arm"] = (v.steps // 3) % 2

@@ -36,7 +36,7 @@ EVENTS = {
 # Events that start the pet app when it is not running (the others only matter to a running one).
 STARTERS = {"SessionStart", "UserPromptSubmit", "PreToolUse", "PermissionRequest", "Notification"}
 # Only `agentpets demo` sends these.
-DEMO_EVENTS = {"Rare": "rare", "Climb": "climb"}
+DEMO_EVENTS = {"Rare": "rare", "Flip": "flip", "Climb": "climb"}
 
 _SAFE = re.compile(r"[^A-Za-z0-9_.:+-]")
 _SAFE_NAME = re.compile(r"[^A-Za-z0-9 _.:+-]")      # a terminal's name may have spaces ("VS Code")

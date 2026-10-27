@@ -35,6 +35,7 @@ one pet per agent window: three Claude Code sessions open means three Clawds (up
 | Done | the turn finished | cheers, confetti | sparkles from the orb, confetti |
 | Oh no | the turn failed | "Oh no…" | droops, "Oh no…" |
 | Tidying up | the conversation is compacted | poof | poof |
+| Backflip | 10 % of finished turns | a backflip, then cheers and confetti | a backflip, then sparkles and confetti |
 | Surprise | 3 % of finished turns | a full turn, drawn from Claude Code's own turn-around sprites | the orb circles her |
 
 After ten quiet minutes a pet falls asleep wherever it is. When its agent exits (however it

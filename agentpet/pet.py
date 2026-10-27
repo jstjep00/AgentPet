@@ -26,6 +26,8 @@ IDLE, THINKING, WORKING, NEEDS_YOU, SLEEPING = "idle", "thinking", "working", "n
 # reaction -> seconds it plays
 SHORT = {"thanks": 1.6, "oops": 1.8, "helper": 1.6, "done": 2.8, "rare": 3.0, "failed": 2.6,
          "compact": 1.8, "poke": 2.2, "arrive": 0.9}
+FLIP_S = 0.6                 # a "flip" is a backflip this long, then the cheer of "done"
+SHORT["flip"] = FLIP_S + SHORT["done"]
 CALM = ("poke", "arrive")    # short reactions that don't call a pet down to the floor
 URGENT_AFTER = 30.0          # needs_you this long: it gets more insistent
 SLEEP_AFTER = 600.0          # idle this long with no event: falls asleep (wherever it is)
@@ -34,6 +36,7 @@ SESSION_TTL = 3 * 3600.0     # a session silent this long is over (when its proc
 CHECK_EVERY = 2.0            # how often the agent processes are checked
 LEAVE_S = 0.9                # the poof when it leaves
 RARE_CHANCE = 0.03
+FLIP_CHANCE = 0.10
 MAX_PETS = 8
 
 
@@ -54,10 +57,11 @@ class View:
 
 class Pet:
     def __init__(self, kind: str, rng: random.Random | None = None, rare_chance: float = RARE_CHANCE,
-                 alive=None) -> None:
+                 alive=None, flip_chance: float = FLIP_CHANCE) -> None:
         self.kind = kind
         self.rng = rng or random.Random()
         self.rare_chance = rare_chance
+        self.flip_chance = flip_chance
         self.alive = alive or (lambda pid, start: True)      # is that agent process still running?
         self.motion = Motion(self.rng)
         self.visible = False
@@ -140,10 +144,12 @@ class Pet:
             pass                # says nothing about what the main agent is doing
         elif r == "done":
             self._steady(IDLE, now)
-            self._play("rare" if self.rng.random() < self.rare_chance else "done", now)
-        elif r == "rare":
+            roll = self.rng.random()
+            self._play("rare" if roll < self.rare_chance else
+                       "flip" if roll < self.rare_chance + self.flip_chance else "done", now)
+        elif r in ("rare", "flip"):
             self._steady(IDLE, now)
-            self._play("rare", now)
+            self._play(r, now)
         elif r == "failed":
             self._steady(IDLE, now)
             self._play("failed", now)
@@ -272,7 +278,7 @@ class Pet:
             return events.tool_label(self.tool)
         if state == NEEDS_YOU:
             return "Still waiting for you…" if urgent else "Needs you!"
-        return {"oops": "Oops!", "helper": "Asking a helper…", "done": "Done!", "failed": "Oh no…",
+        return {"oops": "Oops!", "helper": "Asking a helper…", "done": "Done!", "flip": "Done!", "failed": "Oh no…",
                 "compact": "Tidying up…"}.get(state)
 
 
@@ -282,10 +288,11 @@ class Pets:
     never shows what another agent, or another window of the same agent, is doing."""
 
     def __init__(self, rng: random.Random | None = None, alive=None, rare_chance: float = RARE_CHANCE,
-                 limit: int = MAX_PETS) -> None:
+                 limit: int = MAX_PETS, flip_chance: float = FLIP_CHANCE) -> None:
         self.rng = rng or random.Random()
         self.alive = alive
         self.rare_chance = rare_chance
+        self.flip_chance = flip_chance
         self.limit = limit
         self.pets: dict[str, Pet] = {}
 
@@ -321,7 +328,8 @@ class Pets:
         if pet is None:
             if msg["event"] == "SessionEnd" or len(self.pets) >= self.limit:
                 return None
-            pet = self.pets[k] = Pet(kind, random.Random(self.rng.random()), self.rare_chance, self.alive)
+            pet = self.pets[k] = Pet(kind, random.Random(self.rng.random()), self.rare_chance, self.alive,
+                                     self.flip_chance)
         pet.handle(msg["event"], now, msg.get("session"), msg.get("tool"), msg.get("app"),
                    msg.get("pid"), msg.get("pid_start"), msg.get("where"), msg.get("tty"))
         return pet
