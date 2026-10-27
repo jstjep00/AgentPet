@@ -33,6 +33,7 @@ class EventsTest(unittest.TestCase):
         for name in events.EVENTS:
             self.assertIsNotNone(events.reaction(name))
         self.assertEqual(events.reaction("Rare"), "rare")
+        self.assertEqual(events.reaction("Flip"), "flip")
 
 
 if __name__ == "__main__":

@@ -144,6 +144,7 @@ CLAUDE_DEMO = (
     (4.0, "UserPromptSubmit", None, "thinking again"),
     (2.5, "StopFailure", None, "oh no, the turn failed"),
     (3.5, "Rare", None, "the rare surprise"),
+    (3.5, "Flip", None, "the odd backflip"),
     (4.5, "SessionEnd", None, "goodbye"),
 )
 # Hermes's own script, in a different order, so the two pets are seen doing different things.
@@ -161,6 +162,7 @@ HERMES_DEMO = (
     (3.0, "PreCompact", None, "tidying up the conversation"),
     (2.5, "StopFailure", None, "oh no, the turn failed"),
     (3.5, "Rare", None, "the rare surprise"),
+    (3.5, "Flip", None, "the odd backflip"),
     (4.5, "SessionEnd", None, "goodbye"),
 )
 CLIMB_DEMO = (

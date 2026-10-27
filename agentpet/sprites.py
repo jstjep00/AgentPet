@@ -48,6 +48,13 @@ def flip(sprite: tuple[str, ...]) -> tuple[str, ...]:
     return tuple(reversed(sprite))
 
 
+def rotate(sprite: tuple[str, ...], quarters: int) -> tuple[str, ...]:
+    """Turned clockwise by that many quarter turns (negative is anticlockwise)."""
+    for _ in range(quarters % 4):
+        sprite = tuple("".join(row[x] for row in reversed(sprite)) for x in range(len(sprite[0])))
+    return sprite
+
+
 def stamp(g: list[list[str]], x: int, y: int, bitmap) -> None:
     """Copies the bitmap's opaque pixels into g with its top-left at (x, y), clipped to g."""
     for dy, row in enumerate(bitmap):

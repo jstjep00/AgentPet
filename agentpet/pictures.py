@@ -53,14 +53,14 @@ def icon(path: str) -> None:
 
 
 SHEET = ("idle", "walk", "thinking", "working", "needs_you", "urgent", "thanks", "oops", "helper", "done",
-         "rare", "failed", "compact", "sleeping", "poke", "held", "falling", "bonk", "dizzy", "land",
+         "flip", "rare", "failed", "compact", "sleeping", "poke", "held", "falling", "bonk", "dizzy", "land",
          "wall-left", "ceiling", "wall-right")
 _TURNS = {"wall-left": "cw", "ceiling": "flip", "wall-right": "ccw"}
 
 
 def _sheet_view(pet: Pet, st: str) -> tuple[View, str]:
     real = {"walk": "idle", "urgent": "needs_you"}.get(st, "idle" if st in _TURNS else st)
-    age = {"rare": 0.5 if pet.kind == "clawd" else 0.6, "done": 0.5, "thanks": 0.5, "bonk": 0.2}.get(st, 0.7)
+    age = {"rare": 0.5 if pet.kind == "clawd" else 0.6, "done": 0.5, "flip": 0.3, "thanks": 0.5, "bonk": 0.2}.get(st, 0.7)
     turn = _TURNS.get(st, "")
     return View(pet.kind, real, age, st == "walk" or st in _TURNS, 1, 3, pet.bubble(real, st == "urgent"),
                 st == "urgent", turn), turn

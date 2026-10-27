@@ -46,6 +46,14 @@ class ClawdTest(unittest.TestCase):
     def test_no_eyes_seen_from_behind(self):
         self.assertNotIn("k", "".join(s.clawd_turn("back")))
 
+    def test_quarter_turns(self):
+        g = s.clawd("left", "one-up")
+        self.assertEqual(s.rotate(g, 1)[0], "".join(row[0] for row in reversed(g)))     # clockwise
+        self.assertEqual((len(s.rotate(g, 1)), len(s.rotate(g, 1)[0])), (s.CLAWD_W, s.CLAWD_H))
+        self.assertEqual(s.rotate(g, 2), s.mirror(s.flip(g)))
+        self.assertEqual(s.rotate(g, -1), s.rotate(g, 3))
+        self.assertEqual(s.rotate(g, 4), g)
+
 
 class HermesTest(unittest.TestCase):
     def test_drawing_rows_are_the_full_width(self):
